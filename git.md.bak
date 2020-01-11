@@ -423,5 +423,6 @@ git remote --verbose
 
 获取新的提交:
 git fetch repo_name #获取所有提交
+也可以指定分支名称，只获取该分支的提交
 
 

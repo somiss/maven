@@ -337,6 +337,17 @@ git log HEAD..MERGE_HEAD
 
 合并冲突的原则应当是尽量谨慎，冲突问题已经超出git的能力范围，必须是由人工确认/代码测试。
 
+举例：将本地分支推送至远程分支。
+
+1. 切换分支:git checkout a-branch
+2. git push
+fatal: The current branch a-branch has no upstream branch.
+To push the current branch and set the remote as upstream, use
+
+    git push --set-upstream origin a-branch
+3. git push --set-upstream origin a-branch
+将分支推送到远程版本库并且将远程版本库的分支切换为a-branch
+
 # 通过变基净化历史
 
 git rebase 通常有以下2个应用场景:
