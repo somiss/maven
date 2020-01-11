@@ -177,6 +177,15 @@ git stash list # 列出储藏栈的内容
 4. git stash pop # 弹出储藏的修改
 
 第4步显然还包含自动merge，如果无法自动merge会如何呢?
+无法自动merge仍然会merge，不过会提示有冲突，并在冲突文件中有如下内容:
+`c
+ <<<<< Updated upstream 
+ ....a1
+ =====
+ ...a2
+ stashed changes
+`
+其中a1就是pull下来的内容，====和stashed changes之间的内容a2就是本地修改的内容.
 
 
 # 版本库
@@ -294,9 +303,10 @@ git merge a-branch
 虽然有冲突，但git merge仍然会对文件进行改动。结果通常如下：
 
 ...
-<<<<<<<<HEAD
+`<<<<<<<<HEAD`
 valid
-<<<<<<<<a-branch
+
+`<<<<<<<a-branch`
 invalid
 ...
 
@@ -328,3 +338,90 @@ git log HEAD..MERGE_HEAD
 合并冲突的原则应当是尽量谨慎，冲突问题已经超出git的能力范围，必须是由人工确认/代码测试。
 
 # 通过变基净化历史
+
+git rebase 通常有以下2个应用场景:
+
+1. 如果不小心在错误的分支上执行了一次提交，可以利用git rebase将提交转移到正确的分支上
+2. 整合分叉过多的提交历史为平滑线性历史。
+
+它的副作用:它会改变历史。包含合并操作，可能带来冲突
+
+## 原理：复制提交
+变基操作的工作原理:git会让想要移动的提交序列在目标分支按照相同的顺序再现一遍。由于分支的不同，这些提交的散列值通常都是"新提交散列值"。
+所以它可能带来冲突。
+
+`git rebase --abort`:取消rebase命令
+
+举例：
+A-B       #master
+|
+C-D       #a-branch
+
+>a-branch是活动分支
+
+`git reabse master` :
+
+1. 确认提交:确认在活动分支 且 不在目标上的提交,即C D.
+2. 确认提交位置:确认目标分支(master)上要执行变基操作的地方，即B
+3. 复制提交:将CD复制到目标分支,创建新的提交C'D'。
+4. 重置活动分支:将活动分支指向提交D'所在的分支。
+
+A-B
+  |
+  C'-D'         #master
+
+
+注意:CD仍在版本库中，只是不再可见，但可以利用散列值直接访问。执行GC之后，将被清理掉。
+
+通常使用git pull --rebase命令。
+
+`git pull`= git fetch + git merge FETCH_HEAD
+`git pull --rebase` = git fetch + git rebase FETCH_HEAD
+
+区别是:git merge 会将2个分支汇聚成一个新提交。
+
+`遇到冲突怎么办?`
+1. 简单粗暴的方法:放弃变基，git rebase --abort
+2. 处理冲突:处理冲突文件之后依次执行
+    git add conflict.file
+    git rebase --continue
+
+
+如果已经将提交push至远程版本库，那么不该对该提交执行rebase操作了，因为其他开发者可能在此提交上有新的提交。
+
+# cherry-pick
+复制提交的另外一种方式
+`git cherry-pick commit-id`
+它会创建一次新的提交。
+它可用于将一次bug修复的提交传递至多个版本。
+它可在决定删除某分支之前，移动有用的提交。
+该操作的对版本库的修改较小。
+git命令的缺陷是 相当混乱，加个参数命令作用即天差地别，同时也缺少对危险命令的确认机制。
+
+
+# 版本库间的切换
+
+
+## 克隆
+
+git help clone 可查看命令详情
+
+执行clone的场景：
+1.在中央服务器上执行:往往是为了对项目进行重大改变；修改重大bug；备份。
+2.在开发者的服务器上执行clone:每个开发者都要一个克隆版本才能展开工作
+
+clone版本库
+git clone file://filepath
+git clone ssh://sshaddr
+git clone url
+
+别名:
+git remote add repo_name file://filepath
+删除别名:
+git remote rm repo_name
+git remote --verbose
+
+获取新的提交:
+git fetch repo_name #获取所有提交
+
+

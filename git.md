@@ -401,9 +401,28 @@ git命令的缺陷是 相当混乱，加个参数命令作用即天差地别，�
 
 # 版本库间的切换
 
+
+## 克隆
+
 git help clone 可查看命令详情
 
+执行clone的场景：
+1.在中央服务器上执行:往往是为了对项目进行重大改变；修改重大bug；备份。
+2.在开发者的服务器上执行clone:每个开发者都要一个克隆版本才能展开工作
 
+clone版本库
+git clone file://filepath
+git clone ssh://sshaddr
+git clone url
 
+别名:
+git remote add repo_name file://filepath
+删除别名:
+git remote rm repo_name
+git remote --verbose
+
+获取新的提交:
+git fetch repo_name #获取所有提交
+也可以指定分支名称，只获取该分支的提交
 
 
