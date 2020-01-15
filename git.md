@@ -72,7 +72,7 @@ git diff #工作区与暂存区的差异
 git diff --cached #暂存区与HEAD(版本库最新提交)的差异，也可以使用--stage
 git diff HEAD #工作区与版本库的差异
  gitk #该命令会调用gitk工具，可以图形化的形式查看提交记录
-使用git rm foo.txt 可以删除某文件。它使用的不多，因为linux/mac系统命令rm同样能删除文件。git rm的区别仅仅是它同时删除了git的记录。
+使用git rm foo.txt 可以删除某文件。git rm的区别仅仅是它可以作为提交记录。
 
 git log 
 列出项目的提交历史.git log -10 列出最近的10条。
@@ -85,7 +85,7 @@ git cat-file -t commitid # 列出commitid对应的对象类型
 
 HEAD #版本库最新提交
 master #master分支最新提交
-HEAD^ #HEAD的父提交
+HEAD^ #HEAD的父提交，注意是父提交，不是上一次提交
 HEAD^^ #HEAD的父提交的父提交
 HEAD~1 == HEAD^
 HEAD~2 == HEAD^^
@@ -169,6 +169,50 @@ git reset HEAD bbb.txt存在的问题?
 如果在add以后bbb.txt又有新的修改，重置以后，第一次add的内容就不存在于三个区:工作区，暂存区，版本库.
 虽然提交内容即使丢失也通常不是一个问题，因为当前工作区的文件可能是最正确的版本。
 
+git reset --hard HEAD^  
+将工作区和暂存区都重置为当前HEAD的父提交。可能会造成修改丢失。使用该命令后，历史也将改变(git log)，要想回到之前的提交，要使用git reflog.
+
+git reflog记录了分支变更。也可以在.git/logs/heads/branch-name 中查看 branch-name分支的head变更历史.显然这个文件是追加式的，最新的提交应当在文件末尾。
+如果用 
+git reflog show master | head -5
+输出最新的5次变更历史，它的输出结果最新的提交在最上面。
+
+7e2368a master@{0}: commit: xx
+9bf9285 master@{1}: pull origin master: Fast-forward
+111be01 master@{2}: commit: xx
+622f4ed master@{3}: pull origin master: Fast-forward
+04bb39b master@{4}: pull origin master: Merge made by the 'recursive' strategy.
+
+可以使用master@{1}代表master分支的上一次head指向。
+
+`git reset`:危险的命令，它会改变分支的指向。
+两种用法:
+1. paths:如果使用的是路径，是使用指定提交id的文件替换掉暂存区的文件
+2. commit-id/refs:如果使用的是引用或提交id,是用指定的提交状态，对暂存区或工作区进行重置(由参数决定) 。 
+
+git reset HEAD ./src/Init.java #使用HEAD中的 Init.java 重置暂存区的该文件，作用效果就是撤销(git add ./src/Init.java)
+
+git reset --hard commitid 
+该命令参数会执行3步:
+1. 版本库提交状态更改为commitid
+2. 暂存区文件内容与commitid保持一致
+3. 工作区文件内容与commitid保持一致
+
+git reset --soft commitid # 只执行第1步
+git reset --mixed commitid #默认选项。执行1，2步，不改变工作区
+
+举例:
+git reset HEAD  # HEAD一般是最新提交，第1步是相同状态，所以它的效果:移除了暂存区的add内容。
+git reset #同上，不过最好不要使用
+git reset HEAD -- filename #将filename移除暂存区，--用于区分提交引用和文件路径
+git reset -- filename #将filename移除暂存区
+
+git reset --soft HEAD^ #将版本库指向HEAD的父提交，它可用于回退版本库，然后重新提交。
+git reset --hard origin/master 利用origin(一般是远程版本库)的master分支覆盖 本地的 工作区&暂存区&版本库
+
+
+
+
 `暂存区`
 它的作用：
 1. 列出下次提交的文件清单
@@ -176,6 +220,38 @@ git reset HEAD bbb.txt存在的问题?
 暂存区存储的是git add 以后的版本
 git diff --staged 可以查看暂存区与版本库之间的不同
 git diff 查看暂存区与工作区之间的不同
+
+`git checkout`
+注意与`git reset`的区别:reset是改变某分支(master)的指向，而HEAD文件内容不变，仍是指向master,HEAD指向的提交变化是因为master引起的。
+而checkout是直接改变HEAD指向的引用，是HEAD自身发生变化，而不是引用发生变化。HEAD总是指向某个分支的头部。
+git reset:改变分支的指向,不改变HEAD。
+git checkout:改变HEAD头指针指向,不改变分支。
+
+如果使用 git checkout commitid ，而恰好当前分支的最新提交是commitid0，那么此时HEAD就没有指向分支头部，违反常态，git会认为当前处于"分离头指针"状态:detached HEAD。
+这种状态下可以测试、提交，而不影响任何分支，原因是该状态不处于任何分支。如果git checkout master切换回master分支后，分离头指针状态下的修改都将丢失。
+
+git reflog -1  # 输出HEAD的变更记录
+
+git chceckout :危险命令。它会重写工作区。
+
+可以看出git reset主要是为了重置暂存区，而git checkout重置工作区。
+
+git checkout 用法:
+主要有三种
+
+1. filename:重写(暂存区或工作区)文件
+2. git branch branchname:更改HEAD指向
+3. git branch -b newbranch:创建新的分支
+
+
+1.  git checkout branch-name # 变更HEAD指向，切换到branch-name分支
+2.  git checkout # 显示工作区&暂存区 同HEAD的差异
+3.  git checkout HEAD #同2,命令较难理解，不要使用。HEAD本身肯定可以追溯到一个提交，checkout到一个提交会如何？
+4.  git checkout HEAD -- filename:用暂存区的filename覆盖工作区的filename.即丢掉git add filename以后的修改
+5.  git checkout branchname -- filename:用branchname分支的filename覆盖*工作区和暂存区*的filaname。但HEAD不改变。
+6.  git checkout . # 用暂存区覆盖工作区
+7.  git checkout -- . #同6
+
 
 
 #### 使用.gitignore忽略非版本控制文件
@@ -203,6 +279,7 @@ git stash pop # 弹出(恢复)最新的储藏
 git stash pop stash@{0} # 弹出指定的储藏
 git stash list # 列出储藏栈的内容
 
+git stash信息保存在 .git/logs/refs/stash 中
 该命令可以用来处理冲突。git stash以后，工作区将与版本库保持一致，可以进行git pull。因此处理冲突的流程为:
 1. git pull # 发现冲突，无法pull
 2. git stash # 储藏修改，工作区置为当前版本库版本
