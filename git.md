@@ -72,7 +72,7 @@ git diff #工作区与暂存区的差异
 git diff --cached #暂存区与HEAD(版本库最新提交)的差异，也可以使用--stage
 git diff HEAD #工作区与版本库的差异
  gitk #该命令会调用gitk工具，可以图形化的形式查看提交记录
-使用git rm foo.txt 可以删除某文件。它使用的不多，因为linux/mac系统命令rm同样能删除文件。git rm的区别仅仅是它同时删除了git的记录。
+使用git rm foo.txt 可以删除某文件。git rm的区别仅仅是它可以作为提交记录。
 
 git log 
 列出项目的提交历史.git log -10 列出最近的10条。
@@ -204,7 +204,7 @@ git reset --mixed commitid #默认选项。执行1，2步，不改变工作区
 举例:
 git reset HEAD  # HEAD一般是最新提交，第1步是相同状态，所以它的效果:移除了暂存区的add内容。
 git reset #同上，不过最好不要使用
-git reset HEAD -- filename #将filename移除暂存区
+git reset HEAD -- filename #将filename移除暂存区，--用于区分提交引用和文件路径
 git reset -- filename #将filename移除暂存区
 
 git reset --soft HEAD^ #将版本库指向HEAD的父提交，它可用于回退版本库，然后重新提交。
@@ -279,6 +279,7 @@ git stash pop # 弹出(恢复)最新的储藏
 git stash pop stash@{0} # 弹出指定的储藏
 git stash list # 列出储藏栈的内容
 
+git stash信息保存在 .git/logs/refs/stash 中
 该命令可以用来处理冲突。git stash以后，工作区将与版本库保持一致，可以进行git pull。因此处理冲突的流程为:
 1. git pull # 发现冲突，无法pull
 2. git stash # 储藏修改，工作区置为当前版本库版本
