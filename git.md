@@ -72,7 +72,7 @@ git diff #工作区与暂存区的差异
 git diff --cached #暂存区与HEAD(版本库最新提交)的差异，也可以使用--stage
 git diff HEAD #工作区与版本库的差异
  gitk #该命令会调用gitk工具，可以图形化的形式查看提交记录
-使用git rm foo.txt 可以删除某文件。git rm的区别仅仅是它可以作为提交记录。
+使用git rm foo.txt 可以删除某文件。git rm的区别仅仅是它可以很方便地作为提交记录。
 
 git log 
 列出项目的提交历史.git log -10 列出最近的10条。
@@ -240,9 +240,9 @@ git checkout 用法:
 主要有三种
 
 1. filename:重写(暂存区或工作区)文件
-2. git branch branchname:更改HEAD指向
-3. git branch -b newbranch:创建新的分支
-
+2. git checkout branchname:更改HEAD指向
+3. git checkout -b newbranch:创建新的分支
+4. git checkout commit-id :分离头指针状态，如果有未提交修改应该无法切换
 
 1.  git checkout branch-name # 变更HEAD指向，切换到branch-name分支
 2.  git checkout # 显示工作区&暂存区 同HEAD的差异
@@ -253,6 +253,22 @@ git checkout 用法:
 7.  git checkout -- . #同6
 
 
+### 文件归档
+直接用tar命令会将.git等内容也归档，应当使用
+git archive -o latest.zip HEAD #基于最新提交归档
+
+### 反转提交
+git reset只能实现本地版本库的修改。git revert可以修改远程版本库的.
+
+git revert commit_id的作用是对commit_id进行逆向操作，所以它会生成一次新的提交用于恢复原样，它之所以叫revert原因是:
+commit_id：
+--- m1
++++ m2
+revert 提交：
++++ m1
+--- m2
+
+所以用手动修改文件的方式同样可以撤销不需要的提交，它本质上是一次新的提交。
 
 #### 使用.gitignore忽略非版本控制文件
 通常有以下几类:
@@ -547,6 +563,56 @@ git fetch repo_name #获取所有提交
 也可以指定分支名称，只获取该分支的提交
 
 
+
+
+
+## 冲突示例
+
+本地版本库         远程版本库
+A                A - B
+  \
+   C
+当执行git push时，会提示rejected，无法快进合并(因为远程版本库最新提交是B，而不是A)，需要先执行git pull
+
+此时执行pull的过程:
+本地版本库
+git fetch
+A ... B
+  \
+   C
+
+git merge     #自动生成一个提交D
+
+A - B
+  \   \
+   C - D
+
+再执行push
+以后远程版本库变为
+
+A - B
+  \   \
+   C - D
+
+
+git merge [options] commt_id|branch_name  将指定提交/分支合并到当前分支
+
+合并可能遇到以下情况:
+1. u0 ,u1修改不同的文件
+  这种情况总是可以自动合并，因为没有发生内容冲突。通过git pull,git push即可完成推送。
+2. u0,u1修改相同的文件的不同区域
+  这这情况往往也可以自动合并，使用git blame filename 可以查看文件每一行的最后提交者
+3.u0修改文件名,u1修改文件内容
+  可以自动合并。合并结果都是文件被改名且文件内容修改完成。
+4.u0,u1修改相同文件的相同区域
+  无法自动合并，git会在文件中同时列出两个版本的内容，由用户自行决定合并结果。可以使用git mergetool启动可用的合并图形工具。
+5.u0,u1同时修改文件名
+  无法自动合并，git肯定无法决定到底采用哪个文件名。只能由用户自行决定。合并时可能需要使用git rm 移除不需要的文件(名).
+
+虽然自动合并顺利完成，也不代表合并的结果符合原义，git无法保证合并结果的正确性(这是测试的目标)
+
+标签 
+git tag tagname commit_id
 
 
 
