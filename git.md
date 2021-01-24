@@ -288,6 +288,15 @@ test/  # 忽略所有路径包含`test/`的文件
 它只能影响当前还未交由git来管理的文件，如果文件已经存在于版本库，那么该方式失效。
 如果想忽略一个已经被版本化的文件，可以使用update-index 命令的--assume-unchanged来做到这一点
 
+如何忽略已被版本化文件的修改？
+.gitignore无效了。
+
+git update-index --assume-unchanged foo.txt
+
+停止忽略
+git undate-index --no-assume-unchanged foo.txt
+一次停止所有的忽略
+git update-index --really-refresh
 
 ### git stash
 该命令将`工作区`和`暂存区`的修改保存在储藏栈stash stack中。
@@ -378,10 +387,10 @@ b-branch
 master可以认为指的是第一个存在的分支，通常也是“主分支”。
 它是指向该分支的指针。
 
+git branch commit_id/ref #创建分支
 
 
-
-git checkout a-branch #切换到分支a-branch
+git checkout a-branch #切换到分支a-branch,如果没有则尝试从远程分支中找到a-branch，再创建相应的分支
 
 git branch a-branch #为当前提交创建分支
 
@@ -613,6 +622,93 @@ git merge [options] commt_id|branch_name  将指定提交/分支合并到当前�
 
 标签 
 git tag tagname commit_id
+git tag -m 'tag desc' tagname commit_id
+git tag -d tagname #删除tag
+tag默认只在本地版本库可见，执行git push也不会将tag推送到远程版本库。
+git push origin tagname
+
+
+# 远程版本库
+
+git branch -r #列出远程分支
+git复制远程分支时，远程分支是被复制到不同的命名空间下(不同的文件下):.git/refs/remotes/orgin/,这样就可以隔离不同的远程版本库的同名分支。
+
+追踪远程分支
+本地是不能直接追踪远程分支的，例如使用git checkout orgin/a-branch 会处于"分离头指针状态"。
+需要基于远程分支创建本地分支:
+git chekcout a-branch #使用这个命令，如果git找到orgin/a-branch，那么命令的结果是:基于orgin/a-branch 创建一个本地a-branch分支。
+git checkout -b a-branch orgin/a-branch  #如果有多个远程分支名为a-branch 就不能使用上一条命令，需要补全参数。
+这样创建的本地分支会自动跟踪远程分支，类似于master分支与origin/master.如果是直接创建本地分支，而不关联至远程跟踪分支，则不能使用
+git pull 或 git push命令。
+
+注册远程版本库:
+git remote add new_remote https://github.com/somiss/project-a #版本库是针对项目而言，所以这条命令也只对本项目版本库有效
+可以到./git/config查看链接已经被添加到配置文件中
+
+
+
+# 多版本库组成的项目
+可以采取两种方式:submodule,subtree。只介绍submodule。
+
+应用场景:有一通用API项目版本库(base_api.git)，其他业务项目都需要引入该项目代码。
+文件目录:
+`c
+- mygit
+  + base_api/
+  + project-a/
+  + project-b/
+`
+## 引入submodule
+在project-a.git中执行:
+
+git submodule add ../base_api.git ./sub/base  # 在项目的./sub/base目录下引入base_api的代码
+工作目录变化:
+
+- project-a/
+  + .git/
+  .gitmodules
+  + src/
+  - sub/
+    + base/
+
+.gitmodules记录了子模块的相关信息
+
+子模块信息可以commit和push至远程版本库。子模块信息会push到远程版本库(gitlink),子模块的内容不会被push。
+
+## 克隆带有子模块的版本库
+远程版本库有project-a项目，克隆以后:
+1. git clone xxxx.git 
+
+克隆的结果是:包含本版本库所有文件，包含.gitmodules 和 子模块文件目录，但子模块的内容为空。
+
+2. git submodule status
+
+显示子模块的状态，会显示出子模块提交id前有 - 号，意思为未检出。
+
+3. git submodule init
+
+初始化子模块，它会修改.git/config文件，对子模块进行注册。
+
+4. git submodule update
+
+更新子模块，它会pull子模块的内容至project-a/sub/base/目录下，且有.git文件，虽然配置的子模块路径为../base_api.git，
+但不会在本地生成相应路径的版本库。
+
+## 修改子模块下的文件
+
+修改后可以正常提交，提交后:
+
+ * 子模块 提交状态领先远程版本库(base_api.git)
+ * prokect-a的子模块指向新的提交
+ 
+现在如果git submodule update，子模块工作区被重置，会处于分离头指针状态。
+现在如果在project-a中执行git push，会更新远程版本库的gitlink，但此时对应的子模块提交id并不存在于远程版本库，因此会报错。
+需要先在子模块中执行push，再push父模块。
+
+
+`备份问题`
+如果将prokect-a备份，需注意子模块只会被分gitlink,相当于丢失了子模块内容。
+
 
 
 
